@@ -1,0 +1,12 @@
+# App artifacts
+_rel/
+deps/
+ebin/
+cloudQ.d
+.erlang.mk
+# Generated on crash by the VM
+erl_crash.dump
+
+# Logs
+/log
+lager*
