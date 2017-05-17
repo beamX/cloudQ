@@ -20,26 +20,30 @@ start_link(Args) ->
 init(Args) ->
     process_flag(trap_exit, true),
     {_, QName} = lists:keyfind(qname, 1, Args),
-    {ok, #{qname => QName}}.
+    Config     = case lists:keyfind(config, 1, Args) of
+                     false -> erlcloud_aws:default_config();
+                     Conf -> Conf
+                 end,
+    {ok, #{qname => QName, config => Config}}.
 
 
-handle_call({read_message, Limit}, _From, #{qname := QName} = State) ->
-    Msgs = erlcloud_sqs:receive_message(QName, [], Limit),
-    Ret = case lists:keyfind(messages, 1, Msgs) of
-              {messages, MsgList} -> {ok, process_msg_list(MsgList)};
-              _ -> {error, unkown_resp}
-          end,
+handle_call({read_message, Limit}, _From, #{qname := QName, config := Config} = State) ->
+    Msgs = erlcloud_sqs:receive_message(QName, [], Limit, Config),
+    Ret  = case lists:keyfind(messages, 1, Msgs) of
+               {messages, MsgList} -> {ok, process_msg_list(MsgList)};
+               _ -> {error, unkown_resp}
+           end,
     {reply, Ret, State};
 
 %% Msgs = io_list
-handle_call({send_message, Msg}, _From, #{qname := QName} = State) ->
-    Ret = erlcloud_sqs:send_message(QName, Msg),
+handle_call({send_message, Msg}, _From, #{qname := QName, config := Config} = State) ->
+    Ret = erlcloud_sqs:send_message(QName, Msg, Config),
     {reply, Ret, State};
 
-handle_call({commit_message, MsgMeta}, _From, #{qname := QName} = State) ->
+handle_call({commit_message, MsgMeta}, _From, #{qname := QName, config := Config} = State) ->
     lists:map(fun(Meta) ->
                       {_, RH} = lists:keyfind(receipt_handle, 1, Meta),
-                      ok = erlcloud_sqs:delete_message(QName, RH)
+                      ok = erlcloud_sqs:delete_message(QName, RH, Config)
               end, MsgMeta),
     {reply, ok, State};
 
