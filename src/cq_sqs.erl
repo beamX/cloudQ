@@ -22,7 +22,7 @@ init(Args) ->
     {_, QName} = lists:keyfind(qname, 1, Args),
     Config     = case lists:keyfind(config, 1, Args) of
                      false -> erlcloud_aws:default_config();
-                     Conf -> Conf
+                     {config, Conf} -> Conf
                  end,
     {ok, #{qname => QName, config => Config}}.
 

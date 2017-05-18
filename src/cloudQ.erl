@@ -31,6 +31,7 @@ aws_sqs(Queue, Opts, Args) ->
                  {strategy, fifo},
                  {max_overflow, WorkerNum*2}],
 
+
     Args2      = [{qname, QName} | Args],
     WorkerSpec = poolboy:child_spec(PoolName, PoolArgs, Args2),
     cloudQ_sup:start_q(WorkerSpec),
