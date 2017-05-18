@@ -37,7 +37,7 @@ handle_call({read_message, Limit}, _From, #{qname := QName, config := Config} = 
 
 %% Msgs = io_list
 handle_call({send_message, Msg}, _From, #{qname := QName, config := Config} = State) ->
-    Ret = erlcloud_sqs:send_message(QName, Msg, Config),
+    Ret = erlcloud_sqs:send_message(QName, Msg, none, Config),
     {reply, Ret, State};
 
 handle_call({commit_message, MsgMeta}, _From, #{qname := QName, config := Config} = State) ->
