@@ -3,7 +3,8 @@
 -behaviour(gen_server).
 -behaviour(poolboy_worker).
 
--export([start_link/1
+-export([start_link/1,
+         allocate_partition/2
         ]).
 
 -export([init/1,
@@ -14,6 +15,14 @@
          code_change/3]).
 
 
+allocate_partition(PoolName, Number) ->
+    poolboy:transaction(PoolName,
+                        fun(Worker) ->
+                                gen_server:call(Worker, {allocate_partition, Number})
+                        end).
+
+
+
 start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).
 
@@ -21,21 +30,21 @@ init(Args) ->
     process_flag(trap_exit, true),
     {_, Topic}      = lists:keyfind(topic, 1, Args),
     {_, Client}     = lists:keyfind(client, 1, Args),
-    {_, Partitions} = lists:keyfind(partitions, 1, Args),
     {_, PartFun}    = lists:keyfind(partition_fun, 1, Args),
     {ok, #{topic         => Topic,
            client        => Client,
            partition_fun => PartFun,
-           partitions    => Partitions}}.
+           partition     => none}}.
 
+handle_call({allocate_partition, Number}, _From, State) ->
+    {reply, ok, State#{partition => Number}};
 
-handle_call({send_message, Id, Msg}, _From, #{topic := Topic,
-                                              client := Client,
+handle_call({send_message, Id, Msg}, _From, #{topic         := Topic,
+                                              client        := Client,
                                               partition_fun := PartFun} = State) ->
     Ret = brod:produce_sync(Client, Topic, PartFun, Id, Msg),
     {reply, Ret, State};
 
-%% round-robin read from paritions
 handle_call({read_message, _Limit}, _From, #{topic      := Topic,
                                              client     := Client,
                                              partition  := Partition,

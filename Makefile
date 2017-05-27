@@ -5,8 +5,8 @@ PROJECT_VERSION = 0.1.0
 BUILD_DEPS  = reload_mk
 DEP_PLUGINS = reload_mk
 
-DEPS = erlcloud poolboy lager hackney jch_erl
-deps_jch_erl = git https://github.com/darach/jch-erl master
+DEPS = erlcloud poolboy lager hackney jch_erl brod
+dep_jch_erl = git https://github.com/darach/jch-erl master
 
 
 include erlang.mk
