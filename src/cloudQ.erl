@@ -62,37 +62,32 @@ gcp_pub_sub(Project, Topic, Subscription, Opts, Args) ->
 
 kafka_q(Topic, Opts, Args) ->
     QName         = "kafka_" ++ binary_to_list(Topic),
+    GroupId       = <<"group_", Topic/bitstring>>,
     Client        = list_to_atom(QName),
     PoolName      = pool_name(QName),
     WorkerMod     = get_config(wmodule, Opts, cq_kafka),
+    MsgHandler    = get_config(msg_handler, Opts, fun kaf_subscriber:process_msg/1),
     Endpoints     = get_config(endpoints, Opts, [{"localhost", 9092}]),
-    {_, PartList} = lists:keyfind(assigned_partitions, 1, Opts),
-    WorkerNum     = length(PartList),
+    WorkerNum     = get_config(size, Opts, 2),
 
     %% Consisting hashing function to map msgs with same key to the same
     %% partition for sequential processing and also ensure that each partition
     %% is equally populated
     Args2      = [{topic, Topic},
                   {partition_fun, fun ?MODULE:kafka_partition/4},
+                  {hosts, Endpoints},
                   {client, Client} | Args],
     PoolArgs   = poolboy_args(PoolName, WorkerMod, WorkerNum),
     WorkerSpec = poolboy:child_spec(PoolName, PoolArgs, Args2),
     cloudQ_sup:start_q(WorkerSpec),
 
-    %% assign one partition to each worker
-    %% NOTE: poolboy workers will be accessed in a round-robin fashion
-    %% hence we will be able to consume all the partitions equally
-    lists:map(fun(Number) ->
-                      ok = WorkerMod:allocate_partition(PoolName, Number)
-              end, PartList),
-
     %% {ok, NumPartions} = brod:get_partitions_count(Client, Topic),
     ok = brod:start_client(Endpoints, Client),
     ok = brod:start_producer(Client, Topic, []),
-    ok = brod:start_consumer(Client, Topic, []),
+    %% ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}, {partitions, [0]}]),
 
+    kaf_subscriber:start(Client, Topic, GroupId, MsgHandler),
     {ok, PoolName}.
-
 
 
 
