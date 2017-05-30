@@ -84,7 +84,7 @@ kafka_q(Topic, Opts, Args) ->
     %% {ok, NumPartions} = brod:get_partitions_count(Client, Topic),
     ok = brod:start_client(Endpoints, Client),
     ok = brod:start_producer(Client, Topic, []),
-    %% ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}, {partitions, [0]}]),
+    ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}, {partitions, [0]}]),
 
     kaf_subscriber:start(Client, Topic, GroupId, MsgHandler),
     {ok, PoolName}.

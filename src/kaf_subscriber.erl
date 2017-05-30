@@ -19,12 +19,14 @@ handle_message(_Topic, _Partition, Message, #{msg_handler := MsgHandler} = State
                   , value = Value
                   } = Message,
     lager:log(info, [], "RECV: ~p, ~p, ~p, ~p~n", [Offset, Key, Value, State]),
-    MsgHandler({Key, Value, State}).
+    case MsgHandler({Key, Value}) of
+        ok -> {ok, State};
+        ack -> {ok, ack, State}
+    end.
 
-
-process_msg({Key, Value, State}) ->
+process_msg({Key, Value}) ->
     lager:log(info, [], "PROCESSING: ~p ~p ~n", [Key, Value]),
-    {ok, State}.
+    ok.
 
 
 
