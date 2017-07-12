@@ -3,6 +3,7 @@
 -export([aws_sqs/3,
          gcp_pub_sub/5,
          kafka_q/3,
+         kafka_q/4,
          read_message/1,
          read_message/2,
          send_message/2,
@@ -61,14 +62,18 @@ gcp_pub_sub(Project, Topic, Subscription, Opts, Args) ->
 
 
 kafka_q(Topic, Opts, Args) ->
-    QName         = "kafka_" ++ binary_to_list(Topic),
-    GroupId       = <<"group_", Topic/bitstring>>,
-    Client        = list_to_atom(QName),
-    PoolName      = pool_name(QName),
-    WorkerMod     = get_config(wmodule, Opts, cq_kafka),
-    MsgHandler    = get_config(msg_handler, Opts, fun kaf_subscriber:process_msg/1),
-    Endpoints     = get_config(endpoints, Opts, [{"localhost", 9092}]),
-    WorkerNum     = get_config(size, Opts, 2),
+    kafka_q(read_write, Topic, Opts, Args).
+
+kafka_q(SubType, Topic, Opts, Args) ->
+    QName           = "kafka_" ++ binary_to_list(Topic),
+    GroupId         = <<"group_", Topic/bitstring>>,
+    Client          = list_to_atom(QName),
+    PoolName        = pool_name(QName),
+    WorkerMod       = get_config(wmodule, Opts, cq_kafka),
+    MsgHandler      = get_config(msg_handler, Opts, fun kaf_subscriber:process_msg/1),
+    Endpoints       = get_config(endpoints, Opts, [{"localhost", 9092}]),
+    MsgHandlerState = get_config(msg_handler_state, Opts, #{}),
+    WorkerNum       = get_config(size, Opts, 2),
 
     %% Consisting hashing function to map msgs with same key to the same
     %% partition for sequential processing and also ensure that each partition
@@ -84,9 +89,18 @@ kafka_q(Topic, Opts, Args) ->
     %% {ok, NumPartions} = brod:get_partitions_count(Client, Topic),
     ok = brod:start_client(Endpoints, Client),
     ok = brod:start_producer(Client, Topic, []),
-    ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}, {partitions, [0]}]),
 
-    kaf_subscriber:start(Client, Topic, GroupId, MsgHandler),
+    case SubType of
+        write -> ok;
+        read_write ->
+            case lists:keyfind(partitions, 1, Opts) of
+                {partitions, P} ->
+                    ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}, {partitions, P}]);
+                false ->
+                    ok = brod:start_consumer(Client, Topic, [{prefetch_count, 1}])
+            end,
+            kaf_subscriber:start(Client, Topic, GroupId, MsgHandler, MsgHandlerState)
+    end,
     {ok, PoolName}.
 
 
