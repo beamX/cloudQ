@@ -54,6 +54,15 @@ CloudQ aims to provide a unified way to interact with different message queue so
    Note that the function returns `:ack`, which is required to commit the offset. The function can also return `{:ack, new_msg_handler_state}` to update the handler's state.
    
    
-   
+   Following is an example demonstrating how to write messages to kafka
+
+   ```Elixir
+    :ok = :cloudQ.send_message_with_id(client, key, msg)
+   ```
+
+   - `client`: is the value returned by `{:ok, client} = :cloudQ.kafka_q(topic, opts, args)`
+   - `key` : any term for the message, which is used to decide the partition to which the message will be written. So, to send message to same partition one should use the same `key`.    
+   - `msg` : usually encoded json or any term
+
 ## TODO supports
   - Rabbitmq
