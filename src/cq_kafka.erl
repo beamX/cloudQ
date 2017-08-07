@@ -17,7 +17,7 @@
 
 
 
--include_lib("deps/brod/include/brod.hrl").
+-include_lib("brod/include/brod.hrl").
 
 allocate_partition(PoolName, Number) ->
     poolboy:transaction(PoolName,

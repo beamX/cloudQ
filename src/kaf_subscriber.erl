@@ -1,5 +1,5 @@
 -module(kaf_subscriber).
--include_lib("deps/brod/include/brod.hrl").
+-include_lib("brod/include/brod.hrl").
 
 -export([start/5,
         process_msg/1]).
